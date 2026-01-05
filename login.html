@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="图书馆管理系统 - 演示SQL注入漏洞的教学项目">
+    <title>图书馆管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .login-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .form-box {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .form-box h2 {
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-register {
+            background: #764ba2;
+        }
+        
+        .btn-register:hover {
+            background: #6a4290;
+        }
+        
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .main-interface {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .welcome {
+            font-size: 1.5em;
+            color: #333;
+        }
+        
+        .role-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .logout-btn:hover {
+            background: #c82333;
+        }
+        
+        .system-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .info-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-card h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .info-card p {
+            color: #666;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 768px) {
+            .login-container {
+                flex-direction: column;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 图书馆管理系统</h1>
+            <p>欢迎使用图书馆管理系统，请登录或注册新账户</p>
+        </div>
+        
+        <div class="login-container" id="loginSection">
+            <div class="form-box">
+                <h2>用户登录</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginUsername">用户名</label>
+                        <input type="text" id="loginUsername" placeholder="请输入用户名" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">密码</label>
+                        <input type="password" id="loginPassword" placeholder="请输入密码" required>
+                    </div>
+                    <button type="button" class="btn" onclick="login()">登录</button>
+                </form>
+                <div id="loginMessage" class="message"></div>
+            </div>
+            
+            <div class="form-box">
+                <h2>用户注册</h2>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="regUsername">用户名</label>
+                        <input type="text" id="regUsername" placeholder="请输入用户名" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">密码</label>
+                        <input type="password" id="regPassword" placeholder="请输入密码" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">邮箱</label>
+                        <input type="email" id="regEmail" placeholder="请输入邮箱" required>
+                    </div>
+                    <button type="button" class="btn btn-register" onclick="register()">注册</button>
+                </form>
+                <div id="registerMessage" class="message"></div>
+            </div>
+        </div>
+        
+        <div class="main-interface" id="mainInterface">
+            <div class="user-header">
+                <div>
+                    <div class="welcome" id="welcomeMessage">欢迎回来，用户！</div>
+                    <div class="role-badge" id="userRole">普通用户</div>
+                </div>
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+            
+            <h2>图书馆管理面板</h2>
+            <p>您已成功登录图书馆管理系统</p>
+            
+            <div class="system-info">
+                <div class="info-card">
+                    <h4>📊 系统统计</h4>
+                    <p>图书总数：<strong id="bookCount">0</strong> 本</p>
+                    <p>借阅人数：<strong id="borrowCount">0</strong> 人</p>
+                    <p>在借图书：<strong id="activeBorrow">0</strong> 本</p>
+                </div>
+                
+                <div class="info-card">
+                    <h4>⏰ 最近活动</h4>
+                    <p>• 您最近借阅了《Web安全基础》</p>
+                    <p>• 新书《SQL注入与防御》已上架</p>
+                    <p>• 系统维护：每周日 2:00-4:00</p>
+                </div>
+                
+                <div class="info-card">
+                    <h4>🔐 安全提示</h4>
+                    <p>• 请定期修改密码</p>
+                    <p>• 不要使用简单密码</p>
+                    <p>• 登录后请及时退出</p>
+                </div>
+                
+                <div class="info-card">
+                    <h4>📅 借阅信息</h4>
+                    <p>已借书籍：<strong>0</strong> 本</p>
+                    <p>可借额度：<strong>10</strong> 本</p>
+                    <p>逾期书籍：<strong>0</strong> 本</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>图书馆管理系统 - 教学演示项目 | 包含SQL注入漏洞演示</p>
+        </div>
+    </div>
+
+    <script>
+        // 初始化用户数据
+        let users = [];
+        
+        // 模拟系统数据
+        const systemData = {
+            bookCount: 12543,
+            borrowCount: 892,
+            activeBorrow: 356
+        };
+        
+        // 当前登录用户
+        let currentUser = null;
+        
+        // 保存用户数据到localStorage
+        function saveUsersToStorage() {
+            localStorage.setItem('libraryUsers', JSON.stringify(users));
+        }
+        
+        // 从localStorage加载用户数据
+        function loadUsersFromStorage() {
+            const savedUsers = localStorage.getItem('libraryUsers');
+            if (savedUsers) {
+                users = JSON.parse(savedUsers);
+            } else {
+                // 如果没有保存的数据，创建默认管理员
+                users = [
+                    { 
+                        id: 1, 
+                        username: 'admin', 
+                        password: 'admin123', 
+                        email: 'admin@library.com',
+                        role: '管理员',
+                        registerTime: '2024-01-01'
+                    }
+                ];
+                saveUsersToStorage();
+            }
+        }
+        
+        // 显示消息
+        function showMessage(elementId, message, isSuccess) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `message ${isSuccess ? 'success' : 'error'}`;
+            element.style.display = 'block';
+            
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 注册功能
+        function register() {
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const email = document.getElementById('regEmail').value.trim();
+            
+            if (!username || !password || !email) {
+                showMessage('registerMessage', '请填写所有字段！', false);
+                return;
+            }
+            
+            // 检查用户名是否已存在
+            if (users.find(u => u.username === username)) {
+                showMessage('registerMessage', '用户名已存在！', false);
+                return;
+            }
+            
+            // 创建新用户
+            const newUser = {
+                id: users.length + 1,
+                username: username,
+                password: password,
+                email: email,
+                role: '普通用户',
+                registerTime: new Date().toISOString().split('T')[0]
+            };
+            
+            users.push(newUser);
+            saveUsersToStorage(); // 保存到本地存储
+            
+            showMessage('registerMessage', '注册成功！请使用新账户登录。', true);
+            
+            // 清空表单
+            document.getElementById('regUsername').value = '';
+            document.getElementById('regPassword').value = '';
+            document.getElementById('regEmail').value = '';
+        }
+        
+        // 登录功能（存在SQL注入漏洞）
+        function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!username || !password) {
+                showMessage('loginMessage', '请填写用户名和密码！', false);
+                return;
+            }
+            
+            // 模拟存在SQL注入漏洞的查询
+            let loggedInUser = null;
+            
+            // 模拟SQL注入检测
+            if (username.includes("'") || username.includes("--") || username.includes("/*") || 
+                username.toUpperCase().includes("OR") || username.toUpperCase().includes("AND")) {
+                
+                // 检测常见的SQL注入模式
+                if (username.includes("admin") && username.includes("' OR '")) {
+                    // SQL注入成功：找到admin用户
+                    loggedInUser = users.find(user => user.username === 'admin');
+                } else if (username.includes("'") && username.includes("'--")) {
+                    // 注释符注入
+                    const cleanUsername = username.split("'--")[0].replace(/'/g, "");
+                    loggedInUser = users.find(user => user.username === cleanUsername);
+                } else if (username.includes("' OR '1'='1")) {
+                    // 万能密码
+                    const cleanUsername = username.split("' OR")[0].replace(/'/g, "");
+                    if (cleanUsername) {
+                        loggedInUser = users.find(user => user.username === cleanUsername);
+                    } else {
+                        // 如果没有指定用户名，返回第一个用户
+                        loggedInUser = users[0];
+                    }
+                }
+            } else {
+                // 正常登录验证
+                loggedInUser = users.find(user => 
+                    user.username === username && user.password === password);
+            }
+            
+            if (loggedInUser) {
+                currentUser = loggedInUser;
+                showMainInterface();
+                showMessage('loginMessage', '登录成功！', true);
+            } else {
+                showMessage('loginMessage', '登录失败！用户名或密码错误。', false);
+            }
+            
+            // 清空表单
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+        }
+        
+        // 显示主界面
+        function showMainInterface() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('mainInterface').style.display = 'block';
+            
+            // 更新欢迎信息
+            document.getElementById('welcomeMessage').textContent = 
+                `欢迎回来，${currentUser.username}！`;
+            document.getElementById('userRole').textContent = currentUser.role;
+            
+            // 更新系统数据
+            document.getElementById('bookCount').textContent = 
+                systemData.bookCount.toLocaleString();
+            document.getElementById('borrowCount').textContent = 
+                systemData.borrowCount.toLocaleString();
+            document.getElementById('activeBorrow').textContent = 
+                systemData.activeBorrow.toLocaleString();
+        }
+        
+        // 退出登录
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginSection').style.display = 'flex';
+            document.getElementById('mainInterface').style.display = 'none';
+            showMessage('loginMessage', '已成功退出登录！', true);
+        }
+        
+        // 初始化页面
+        function init() {
+            // 加载保存的用户数据
+            loadUsersFromStorage();
+            
+            // 模拟系统数据更新
+            setInterval(() => {
+                if (currentUser) {
+                    systemData.activeBorrow += Math.floor(Math.random() * 3) - 1;
+                    systemData.activeBorrow = Math.max(0, systemData.activeBorrow);
+                    
+                    document.getElementById('bookCount').textContent = 
+                        systemData.bookCount.toLocaleString();
+                    document.getElementById('borrowCount').textContent = 
+                        systemData.borrowCount.toLocaleString();
+                    document.getElementById('activeBorrow').textContent = 
+                        systemData.activeBorrow.toLocaleString();
+                }
+            }, 10000);
+        }
+        
+        // 页面加载完成后初始化
+        window.onload = init;
+    </script>
+</body>
+</html>
